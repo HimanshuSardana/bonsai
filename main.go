@@ -21,7 +21,11 @@ func main() {
 	case "init":
 		cmd.Init()
 	case "scan":
-		cmd.Scan()
+		path := "."
+		if len(os.Args) > 2 {
+			path = os.Args[2]
+		}
+		cmd.Scan(path)
 	case "serve":
 		cmd.Serve()
 	default:
