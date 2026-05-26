@@ -9,13 +9,18 @@ import (
 	"text/template"
 )
 
+type DiffLine struct {
+	Class string
+	Text  string
+}
+
 type Repo struct {
-	Name    string
-	Path    string
-	Readme  string
-	Commits []Commit
-	Files   []string
-	Diff    string
+	Name     string
+	Path     string
+	Readme   string
+	Commits  []Commit
+	Files    []string
+	DiffLines []DiffLine
 }
 
 type Commit struct {
@@ -54,7 +59,7 @@ func Scan(root string) {
 		repo.Readme = getReadme(repoPath)
 		repo.Commits = getCommits(repoPath)
 		repo.Files = getFiles(repoPath)
-		repo.Diff = getDiff(repoPath)
+		repo.DiffLines = getDiff(repoPath)
 
 		repos = append(repos, repo)
 		return filepath.SkipDir
@@ -139,14 +144,30 @@ func getFiles(path string) []string {
 	return lines
 }
 
-func getDiff(path string) string {
+func getDiff(path string) []DiffLine {
 	cmd := exec.Command("git", "diff", "HEAD~1..HEAD")
 	cmd.Dir = path
 	out, err := cmd.Output()
 	if err != nil {
-		return "(initial commit — no previous diff)"
+		return []DiffLine{{Class: "context", Text: "(initial commit — no previous diff)"}}
 	}
-	return string(out)
+	lines := strings.Split(string(out), "\n")
+	var diffLines []DiffLine
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "+++") || strings.HasPrefix(line, "---"):
+			diffLines = append(diffLines, DiffLine{Class: "header", Text: line})
+		case strings.HasPrefix(line, "@@"):
+			diffLines = append(diffLines, DiffLine{Class: "hunk", Text: line})
+		case strings.HasPrefix(line, "+"):
+			diffLines = append(diffLines, DiffLine{Class: "add", Text: line})
+		case strings.HasPrefix(line, "-"):
+			diffLines = append(diffLines, DiffLine{Class: "del", Text: line})
+		default:
+			diffLines = append(diffLines, DiffLine{Class: "context", Text: line})
+		}
+	}
+	return diffLines
 }
 
 const indexHTML = `<!DOCTYPE html>
@@ -183,7 +204,9 @@ const indexHTML = `<!DOCTYPE html>
 
 <hr>
 <h2>Latest Diff</h2>
-<pre>{{.Diff}}</pre>
+<pre style="padding: 0;">
+{{range .DiffLines}}<span style="display:block;padding:0 8px;{{if eq .Class "add"}}background:#e6ffed;{{else if eq .Class "del"}}background:#ffeef0;{{else if eq .Class "hunk"}}background:#f0f8ff;{{else if eq .Class "header"}}color:#888;{{end}}">{{.Text}}</span>
+{{end}}</pre>
 
 </body>
 </html>`
