@@ -10,12 +10,12 @@ import (
 )
 
 type Repo struct {
-	Name     string
-	Path     string
-	Readme   string
-	Commits  []Commit
-	Files    []string
-	Diff     string
+	Name    string
+	Path    string
+	Readme  string
+	Commits []Commit
+	Files   []string
+	Diff    string
 }
 
 type Commit struct {
