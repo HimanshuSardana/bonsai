@@ -544,9 +544,9 @@
       <span class="sidebar-path">{{.Path}}</span>
       
       <!-- Safe Copy to Clipboard Utility Trigger -->
-      <div class="clone-url" onclick="copyCloneUrl('git clone {{.Path}}', this)">
+      <div class="clone-url" onclick="copyCloneUrl('git clone {{.CloneURL}}', this)">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><polyline points="8 9 12 13 16 9"/><line x1="12" y1="3" x2="12" y2="13"/></svg>
-        <code>git clone {{.Path}}</code>
+        <code>git clone {{.CloneURL}}</code>
         <span class="clone-msg">Copied!</span>
       </div>
 

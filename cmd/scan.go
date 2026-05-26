@@ -15,6 +15,7 @@ var funcMap = template.FuncMap{"toJSON": toJSON}
 type Repo struct {
 	Name        string
 	Path        string
+	CloneURL    string
 	Readme      string
 	Files       []string
 	Commits     []Commit
@@ -42,7 +43,7 @@ func Scan(root string) {
 		os.Exit(1)
 	}
 
-	header, description := parseBonsaiConfig(root)
+	header, description, cloneBase := parseBonsaiConfig(root)
 
 	var repos []Repo
 
@@ -63,6 +64,11 @@ func Scan(root string) {
 		repo := Repo{
 			Name: filepath.Base(repoPath),
 			Path: repoPath,
+		}
+
+		repo.CloneURL = repo.Path
+		if cloneBase != "" {
+			repo.CloneURL = cloneBase + "/" + repo.Name
 		}
 
 		repo.Readme = getReadme(repoPath)
@@ -112,7 +118,7 @@ func Scan(root string) {
 	}
 }
 
-func parseBonsaiConfig(root string) (header, description string) {
+func parseBonsaiConfig(root string) (header, description, cloneBase string) {
 	header = "Bonsai"
 	description = "A lightweight Git frontend"
 	data, err := os.ReadFile(filepath.Join(root, "bonsai.yaml"))
@@ -121,10 +127,13 @@ func parseBonsaiConfig(root string) (header, description string) {
 	}
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "header:") {
+		switch {
+		case strings.HasPrefix(line, "header:"):
 			header = strings.TrimSpace(strings.TrimPrefix(line, "header:"))
-		} else if strings.HasPrefix(line, "description:") {
+		case strings.HasPrefix(line, "description:"):
 			description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		case strings.HasPrefix(line, "clone_url:"):
+			cloneBase = strings.TrimSpace(strings.TrimPrefix(line, "clone_url:"))
 		}
 	}
 	return
