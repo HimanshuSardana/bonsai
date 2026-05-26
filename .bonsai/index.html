@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bonsai</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 40px; }
+.header { text-align: center; margin-bottom: 40px; }
+.header h1 { font-size: 32px; }
+.header p { color: #666; margin-top: 6px; font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 1100px; margin: 0 auto; }
+.card { background: #fff; border-radius: 8px; padding: 20px; text-decoration: none; color: inherit; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.15s; display: flex; flex-direction: column; }
+.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.card h2 { font-size: 16px; margin-bottom: 8px; }
+.card .msg { font-size: 13px; color: #555; flex: 1; }
+.card .time { font-size: 12px; color: #999; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Bonsai</h1>
+  <p>A lightweight Git frontend</p>
+</div>
+<div class="grid">
+
+  <a class="card" href="bonsai/">
+    <h2>bonsai</h2>
+    <div class="msg">feat: sidebar with commits, click to show diff on right</div>
+    <div class="time">7 minutes ago</div>
+  </a>
+
+</div>
+</body>
+</html>

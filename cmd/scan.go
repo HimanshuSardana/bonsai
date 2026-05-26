@@ -11,11 +11,19 @@ import (
 )
 
 type Repo struct {
-	Name    string
-	Path    string
-	Readme  string
-	Files   []string
-	Commits []Commit
+	Name        string
+	Path        string
+	Readme      string
+	Files       []string
+	Commits     []Commit
+	LastMessage string
+	LastTime    string
+}
+
+type SiteIndex struct {
+	Header      string
+	Description string
+	Repos       []Repo
 }
 
 type Commit struct {
@@ -30,6 +38,8 @@ func Scan(root string) {
 		fmt.Fprintf(os.Stderr, "Error resolving path: %v\n", err)
 		os.Exit(1)
 	}
+
+	header, description := parseBonsaiConfig(root)
 
 	var repos []Repo
 
@@ -55,6 +65,7 @@ func Scan(root string) {
 		repo.Readme = getReadme(repoPath)
 		repo.Commits = getCommits(repoPath)
 		repo.Files = getFiles(repoPath)
+		repo.LastMessage, repo.LastTime = getLastCommitInfo(repoPath)
 
 		repos = append(repos, repo)
 		return filepath.SkipDir
@@ -62,6 +73,8 @@ func Scan(root string) {
 
 	outDir := filepath.Join(absRoot, ".bonsai")
 	os.MkdirAll(outDir, 0755)
+
+	funcMap := template.FuncMap{"toJSON": toJSON}
 
 	for _, repo := range repos {
 		repoOutDir := filepath.Join(outDir, repo.Name)
@@ -74,19 +87,61 @@ func Scan(root string) {
 			continue
 		}
 
-		funcMap := template.FuncMap{"toJSON": toJSON}
-		tmpl := template.Must(template.New("index").Funcs(funcMap).Parse(indexHTML))
+		tmpl := template.Must(template.New("index").Funcs(funcMap).Parse(detailHTML))
 		tmpl.Execute(f, repo)
 		f.Close()
-
-		fmt.Printf("Scanned %s\n", repo.Name)
 	}
+
+	mainIndexPath := filepath.Join(outDir, "index.html")
+	f, err := os.Create(mainIndexPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating index: %v\n", err)
+		os.Exit(1)
+	}
+	tmpl := template.Must(template.New("main").Parse(mainHTML))
+	tmpl.Execute(f, SiteIndex{Header: header, Description: description, Repos: repos})
+	f.Close()
 
 	if len(repos) == 0 {
 		fmt.Println("No git repositories found")
 	} else {
 		fmt.Printf("Scanned %d repositories\n", len(repos))
 	}
+}
+
+func parseBonsaiConfig(root string) (header, description string) {
+	header = "Bonsai"
+	description = "A lightweight Git frontend"
+	data, err := os.ReadFile(filepath.Join(root, "bonsai.yaml"))
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "header:") {
+			header = strings.TrimSpace(strings.TrimPrefix(line, "header:"))
+		} else if strings.HasPrefix(line, "description:") {
+			description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		}
+	}
+	return
+}
+
+func getLastCommitInfo(path string) (message, time string) {
+	cmd := exec.Command("git", "log", "-1", "--format=%s")
+	cmd.Dir = path
+	out, err := cmd.Output()
+	if err == nil {
+		message = strings.TrimSpace(string(out))
+	}
+
+	cmd = exec.Command("git", "log", "-1", "--format=%ar")
+	cmd.Dir = path
+	out, err = cmd.Output()
+	if err == nil {
+		time = strings.TrimSpace(string(out))
+	}
+	return
 }
 
 func isGitRepo(path string) bool {
@@ -168,7 +223,43 @@ func getFiles(path string) []string {
 	return lines
 }
 
-const indexHTML = `<!DOCTYPE html>
+const mainHTML = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{.Header}}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 40px; }
+.header { text-align: center; margin-bottom: 40px; }
+.header h1 { font-size: 32px; }
+.header p { color: #666; margin-top: 6px; font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 1100px; margin: 0 auto; }
+.card { background: #fff; border-radius: 8px; padding: 20px; text-decoration: none; color: inherit; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.15s; display: flex; flex-direction: column; }
+.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.card h2 { font-size: 16px; margin-bottom: 8px; }
+.card .msg { font-size: 13px; color: #555; flex: 1; }
+.card .time { font-size: 12px; color: #999; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>{{.Header}}</h1>
+  <p>{{.Description}}</p>
+</div>
+<div class="grid">
+{{range .Repos}}
+  <a class="card" href="{{.Name}}/">
+    <h2>{{.Name}}</h2>
+    <div class="msg">{{.LastMessage}}</div>
+    <div class="time">{{.LastTime}}</div>
+  </a>
+{{end}}
+</div>
+</body>
+</html>`
+
+const detailHTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
