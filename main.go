@@ -27,7 +27,11 @@ func main() {
 		}
 		cmd.Scan(path)
 	case "serve":
-		cmd.Serve()
+		port := "8000"
+		if len(os.Args) > 2 {
+			port = os.Args[2]
+		}
+		cmd.Serve(port)
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
 		os.Exit(1)
