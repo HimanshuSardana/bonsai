@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,18 +11,32 @@ import (
 	"text/template"
 )
 
+//go:embed templates/*.html
+var templateFS embed.FS
+
+var funcMap = template.FuncMap{"toJSON": toJSON}
+
 type Repo struct {
-	Name    string
-	Path    string
-	Readme  string
-	Commits []Commit
-	Files   []string
-	Diff    string
+	Name        string
+	Path        string
+	Readme      string
+	Files       []string
+	Commits     []Commit
+	LastMessage string
+	LastTime    int64
+}
+
+type SiteIndex struct {
+	Header      string
+	Description string
+	Repos       []Repo
 }
 
 type Commit struct {
-	Hash    string
-	Message string
+	Hash      string `json:"hash"`
+	Message   string `json:"message"`
+	Diff      string `json:"diff"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func Scan(root string) {
@@ -29,6 +45,8 @@ func Scan(root string) {
 		fmt.Fprintf(os.Stderr, "Error resolving path: %v\n", err)
 		os.Exit(1)
 	}
+
+	header, description := parseBonsaiConfig(root)
 
 	var repos []Repo
 
@@ -54,7 +72,7 @@ func Scan(root string) {
 		repo.Readme = getReadme(repoPath)
 		repo.Commits = getCommits(repoPath)
 		repo.Files = getFiles(repoPath)
-		repo.Diff = getDiff(repoPath)
+		repo.LastMessage, repo.LastTime = getLastCommitInfo(repoPath)
 
 		repos = append(repos, repo)
 		return filepath.SkipDir
@@ -62,6 +80,9 @@ func Scan(root string) {
 
 	outDir := filepath.Join(absRoot, ".bonsai")
 	os.MkdirAll(outDir, 0755)
+
+	detailTmpl := template.Must(template.New("detail.html").Funcs(funcMap).ParseFS(templateFS, "templates/detail.html"))
+	mainTmpl := template.Must(template.New("main.html").Funcs(funcMap).ParseFS(templateFS, "templates/main.html"))
 
 	for _, repo := range repos {
 		repoOutDir := filepath.Join(outDir, repo.Name)
@@ -74,18 +95,59 @@ func Scan(root string) {
 			continue
 		}
 
-		tmpl := template.Must(template.New("index").Parse(indexHTML))
-		tmpl.Execute(f, repo)
+		detailTmpl.Execute(f, repo)
 		f.Close()
-
-		fmt.Printf("Scanned %s\n", repo.Name)
 	}
+
+	mainIndexPath := filepath.Join(outDir, "index.html")
+	f, err := os.Create(mainIndexPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating index: %v\n", err)
+		os.Exit(1)
+	}
+	mainTmpl.Execute(f, SiteIndex{Header: header, Description: description, Repos: repos})
+	f.Close()
 
 	if len(repos) == 0 {
 		fmt.Println("No git repositories found")
 	} else {
 		fmt.Printf("Scanned %d repositories\n", len(repos))
 	}
+}
+
+func parseBonsaiConfig(root string) (header, description string) {
+	header = "Bonsai"
+	description = "A lightweight Git frontend"
+	data, err := os.ReadFile(filepath.Join(root, "bonsai.yaml"))
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "header:") {
+			header = strings.TrimSpace(strings.TrimPrefix(line, "header:"))
+		} else if strings.HasPrefix(line, "description:") {
+			description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		}
+	}
+	return
+}
+
+func getLastCommitInfo(path string) (message string, ts int64) {
+	cmd := exec.Command("git", "log", "-1", "--format=%s")
+	cmd.Dir = path
+	out, err := cmd.Output()
+	if err == nil {
+		message = strings.TrimSpace(string(out))
+	}
+
+	cmd = exec.Command("git", "log", "-1", "--format=%at")
+	cmd.Dir = path
+	out, err = cmd.Output()
+	if err == nil {
+		fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &ts)
+	}
+	return
 }
 
 func isGitRepo(path string) bool {
@@ -105,7 +167,7 @@ func getReadme(path string) string {
 }
 
 func getCommits(path string) []Commit {
-	cmd := exec.Command("git", "log", "--oneline", "-50")
+	cmd := exec.Command("git", "log", "--format=%H %at %s", "-50")
 	cmd.Dir = path
 	out, err := cmd.Output()
 	if err != nil {
@@ -117,12 +179,43 @@ func getCommits(path string) []Commit {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) == 2 {
-			commits = append(commits, Commit{Hash: parts[0], Message: parts[1]})
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) >= 3 {
+			var ts int64
+			fmt.Sscanf(parts[1], "%d", &ts)
+			commits = append(commits, Commit{
+				Hash:      parts[0],
+				Timestamp: ts,
+				Message:   parts[2],
+				Diff:      getCommitDiff(path, parts[0]),
+			})
 		}
 	}
 	return commits
+}
+
+func toJSON(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
+
+func getCommitDiff(path, hash string) string {
+	cmd := exec.Command("git", "diff", hash+"^.."+hash)
+	cmd.Dir = path
+	out, err := cmd.Output()
+	if err == nil {
+		return string(out)
+	}
+	cmd = exec.Command("git", "show", "--format=", hash)
+	cmd.Dir = path
+	out, err = cmd.Output()
+	if err == nil {
+		return string(out)
+	}
+	return ""
 }
 
 func getFiles(path string) []string {
@@ -139,51 +232,5 @@ func getFiles(path string) []string {
 	return lines
 }
 
-func getDiff(path string) string {
-	cmd := exec.Command("git", "diff", "HEAD~1..HEAD")
-	cmd.Dir = path
-	out, err := cmd.Output()
-	if err != nil {
-		return "(initial commit — no previous diff)"
-	}
-	return string(out)
-}
 
-const indexHTML = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>{{.Name}}</title>
-</head>
-<body>
-<h1>{{.Name}}</h1>
-<p><strong>Path:</strong> {{.Path}}</p>
 
-{{if .Readme}}
-<hr>
-<h2>README</h2>
-<pre>{{.Readme}}</pre>
-{{end}}
-
-<hr>
-<h2>Commits</h2>
-<ul>
-{{range .Commits}}
-<li><code>{{.Hash}}</code> {{.Message}}</li>
-{{end}}
-</ul>
-
-<hr>
-<h2>Files</h2>
-<ul>
-{{range .Files}}
-<li>{{.}}</li>
-{{end}}
-</ul>
-
-<hr>
-<h2>Latest Diff</h2>
-<pre>{{.Diff}}</pre>
-
-</body>
-</html>`
