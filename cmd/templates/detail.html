@@ -200,6 +200,8 @@
   .commit-search {
     position: relative;
     margin-top: 4px;
+    display: flex;
+    align-items: center;
   }
 
   .commit-search svg {
@@ -216,7 +218,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 7px 10px 7px 30px;
+    padding: 7px 42px 7px 30px;
     font-family: var(--font);
     font-size: 12.5px;
     color: var(--text);
@@ -226,6 +228,25 @@
 
   .commit-search input::placeholder { color: var(--muted); }
   .commit-search input:focus { border-color: var(--border-hover); background: var(--bg); }
+
+  .search-shortcut {
+    position: absolute;
+    right: 8px;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 4px;
+    pointer-events: none;
+    user-select: none;
+    transition: opacity 0.10s ease;
+  }
+
+  .commit-search input:focus + .search-shortcut {
+    opacity: 0.4;
+  }
 
   /* Commit List */
   .commit-list {
@@ -553,6 +574,7 @@
       <div class="commit-search">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input type="text" id="commit-filter" placeholder="Search commits..." autocomplete="off" spellcheck="false">
+        <span class="search-shortcut" id="shortcut-hint">⌘K</span>
       </div>
     </div>
     <ul class="commit-list" id="commit-list"></ul>
@@ -652,6 +674,32 @@
   function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  // Bind the Ctrl+K / Cmd+K listener
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const hintEl = document.getElementById('shortcut-hint');
+  if (hintEl) {
+    hintEl.textContent = isMac ? '⌘K' : 'Ctrl+K';
+  }
+
+  window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (document.activeElement === filterInput) {
+        filterInput.blur();
+      } else {
+        filterInput.focus();
+        filterInput.select();
+      }
+    }
+  });
+
+  // Escape defocusses the input
+  filterInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      filterInput.blur();
+    }
+  });
 
   function countDiff(diff) {
     let add = 0, del = 0;
