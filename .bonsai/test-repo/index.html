@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Name}}</title>
+<title>test-repo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -539,14 +539,14 @@
         <a class="back-btn" href="../" title="Back to repositories">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </a>
-        <span class="sidebar-title">{{.Name}}</span>
+        <span class="sidebar-title">test-repo</span>
       </div>
-      <span class="sidebar-path">{{.Path}}</span>
+      <span class="sidebar-path">/home/himanshu/personal/projects/bonsai/test-repo</span>
       
       <!-- Safe Copy to Clipboard Utility Trigger -->
-      <div class="clone-url" onclick="copyCloneUrl('git clone {{.Path}}', this)">
+      <div class="clone-url" onclick="copyCloneUrl('git clone /home/himanshu/personal/projects/bonsai/test-repo', this)">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><polyline points="8 9 12 13 16 9"/><line x1="12" y1="3" x2="12" y2="13"/></svg>
-        <code>git clone {{.Path}}</code>
+        <code>git clone /home/himanshu/personal/projects/bonsai/test-repo</code>
         <span class="clone-msg">Copied!</span>
       </div>
 
@@ -569,15 +569,7 @@
 
     <div class="main-body">
 
-      {{if .Readme}}
-      <div class="section">
-        <div class="section-title">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          README
-        </div>
-        <div class="readme">{{.Readme}}</div>
-      </div>
-      {{end}}
+      
 
       <div class="section">
         <div class="section-title">
@@ -585,12 +577,7 @@
           Files
         </div>
         <ul class="file-list">
-          {{range .Files}}
-          <li class="file-item">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            {{.}}
-          </li>
-          {{end}}
+          
         </ul>
       </div>
 
@@ -608,7 +595,7 @@
   </div>
 </div>
 
-<script id="commits-data" type="application/json">{{.Commits | toJSON}}</script>
+<script id="commits-data" type="application/json">null</script>
 <script>
   const commits = JSON.parse(document.getElementById('commits-data').textContent);
   const listEl      = document.getElementById('commit-list');

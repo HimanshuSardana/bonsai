@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Header}}</title>
+<title>Himanshu's Git Server</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -354,8 +354,8 @@
 <nav>
   <div class="nav-inner">
     <div class="branding">
-      <strong>{{.Header}}</strong>
-      <span class="branding-desc">{{.Description}}</span>
+      <strong>Himanshu's Git Server</strong>
+      <span class="branding-desc">Plan B in case GitHub goes down.</span>
     </div>
     <div class="search-wrap">
       <input type="text" id="search" placeholder="Search..." autocomplete="off" spellcheck="false">
@@ -374,19 +374,19 @@
     <div class="controls-right">
       <div class="stat-pill">
         <span class="stat-dot"></span>
-        <span id="open-count">{{len .Repos}}</span> repos
+        <span id="open-count">2</span> repos
       </div>
     </div>
   </div>
 
   <div class="grid" id="grid">
-  {{range .Repos}}
-    <a class="card" href="{{.Name}}/" data-name="{{.Name}}" data-msg="{{.LastMessage}}">
+  
+    <a class="card" href="bonsai/" data-name="bonsai" data-msg="style: update repo page too">
       <div class="card-header">
-        <span class="card-name">{{.Name}}</span>
-        <span class="card-time" data-ts="{{.LastTime}}"></span>
+        <span class="card-name">bonsai</span>
+        <span class="card-time" data-ts="1779813006"></span>
       </div>
-      <div class="card-msg">{{.LastMessage}}</div>
+      <div class="card-msg">style: update repo page too</div>
       <div class="card-footer">
         <div class="card-stat">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
@@ -398,14 +398,32 @@
         </div>
       </div>
     </a>
-  {{end}}
+  
+    <a class="card" href="test-repo/" data-name="test-repo" data-msg="">
+      <div class="card-header">
+        <span class="card-name">test-repo</span>
+        <span class="card-time" data-ts="0"></span>
+      </div>
+      <div class="card-msg"></div>
+      <div class="card-footer">
+        <div class="card-stat">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          1 branch
+        </div>
+        <div class="card-stat">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          HEAD
+        </div>
+      </div>
+    </a>
+  
   </div>
 
   <div class="empty" id="empty">No matching repositories found.</div>
 
   <div class="page-footer">
-    <span>{{.Header}}</span>
-    <span id="footer-count">{{len .Repos}} repositories</span>
+    <span>Himanshu's Git Server</span>
+    <span id="footer-count">2 repositories</span>
   </div>
 </div>
 
