@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,9 +9,6 @@ import (
 	"strings"
 	"text/template"
 )
-
-//go:embed templates/*.html
-var templateFS embed.FS
 
 var funcMap = template.FuncMap{"toJSON": toJSON}
 
@@ -81,8 +77,9 @@ func Scan(root string) {
 	outDir := filepath.Join(absRoot, ".bonsai")
 	os.MkdirAll(outDir, 0755)
 
-	detailTmpl := template.Must(template.New("detail.html").Funcs(funcMap).ParseFS(templateFS, "templates/detail.html"))
-	mainTmpl := template.Must(template.New("main.html").Funcs(funcMap).ParseFS(templateFS, "templates/main.html"))
+	templateDir := filepath.Join(absRoot, "cmd", "templates")
+	detailTmpl := template.Must(template.New("detail.html").Funcs(funcMap).ParseFiles(filepath.Join(templateDir, "detail.html")))
+	mainTmpl := template.Must(template.New("main.html").Funcs(funcMap).ParseFiles(filepath.Join(templateDir, "main.html")))
 
 	for _, repo := range repos {
 		repoOutDir := filepath.Join(outDir, repo.Name)
