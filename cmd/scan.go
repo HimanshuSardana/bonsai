@@ -17,7 +17,7 @@ type Repo struct {
 	Files       []string
 	Commits     []Commit
 	LastMessage string
-	LastTime    string
+	LastTime    int64
 }
 
 type SiteIndex struct {
@@ -27,9 +27,10 @@ type SiteIndex struct {
 }
 
 type Commit struct {
-	Hash    string `json:"hash"`
-	Message string `json:"message"`
-	Diff    string `json:"diff"`
+	Hash      string `json:"hash"`
+	Message   string `json:"message"`
+	Diff      string `json:"diff"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func Scan(root string) {
@@ -127,7 +128,7 @@ func parseBonsaiConfig(root string) (header, description string) {
 	return
 }
 
-func getLastCommitInfo(path string) (message, time string) {
+func getLastCommitInfo(path string) (message string, ts int64) {
 	cmd := exec.Command("git", "log", "-1", "--format=%s")
 	cmd.Dir = path
 	out, err := cmd.Output()
@@ -135,11 +136,11 @@ func getLastCommitInfo(path string) (message, time string) {
 		message = strings.TrimSpace(string(out))
 	}
 
-	cmd = exec.Command("git", "log", "-1", "--format=%ar")
+	cmd = exec.Command("git", "log", "-1", "--format=%at")
 	cmd.Dir = path
 	out, err = cmd.Output()
 	if err == nil {
-		time = strings.TrimSpace(string(out))
+		fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &ts)
 	}
 	return
 }
@@ -161,7 +162,7 @@ func getReadme(path string) string {
 }
 
 func getCommits(path string) []Commit {
-	cmd := exec.Command("git", "log", "--oneline", "-50")
+	cmd := exec.Command("git", "log", "--format=%H %at %s", "-50")
 	cmd.Dir = path
 	out, err := cmd.Output()
 	if err != nil {
@@ -173,12 +174,15 @@ func getCommits(path string) []Commit {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) == 2 {
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) >= 3 {
+			var ts int64
+			fmt.Sscanf(parts[1], "%d", &ts)
 			commits = append(commits, Commit{
-				Hash:    parts[0],
-				Message: parts[1],
-				Diff:    getCommitDiff(path, parts[0]),
+				Hash:      parts[0],
+				Timestamp: ts,
+				Message:   parts[2],
+				Diff:      getCommitDiff(path, parts[0]),
 			})
 		}
 	}
@@ -252,10 +256,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <a class="card" href="{{.Name}}/">
     <h2>{{.Name}}</h2>
     <div class="msg">{{.LastMessage}}</div>
-    <div class="time">{{.LastTime}}</div>
+    <div class="time" data-ts="{{.LastTime}}"></div>
   </a>
 {{end}}
 </div>
+<script>
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+function relTime(unix) {
+  if (!unix) return '';
+  const delta = Math.floor((Date.now() - unix * 1000) / 1000);
+  if (delta < 60) return rtf.format(-delta, 'second');
+  if (delta < 3600) return rtf.format(-Math.floor(delta / 60), 'minute');
+  if (delta < 86400) return rtf.format(-Math.floor(delta / 3600), 'hour');
+  if (delta < 2592000) return rtf.format(-Math.floor(delta / 86400), 'day');
+  if (delta < 31536000) return rtf.format(-Math.floor(delta / 2592000), 'month');
+  return rtf.format(-Math.floor(delta / 31536000), 'year');
+}
+document.querySelectorAll('[data-ts]').forEach(el => { el.textContent = relTime(el.dataset.ts); });
+</script>
 </body>
 </html>`
 
@@ -277,6 +295,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Sego
 .commit-entry:hover { background: #eef; }
 .commit-entry.active { background: #dde; }
 .commit-entry .hash { font-family: monospace; font-size: 11px; color: #888; }
+.commit-entry .time { font-size: 10px; color: #aaa; }
 .commit-entry .msg { font-size: 13px; margin-top: 2px; }
 .main { flex: 1; overflow-y: auto; padding: 20px; }
 .main h2 { font-size: 14px; color: #333; margin-bottom: 8px; }
@@ -341,11 +360,23 @@ function selectCommit(hash) {
   if (commit) diffView.innerHTML = renderDiff(commit.diff);
 }
 
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+function relTime(unix) {
+  if (!unix) return '';
+  const delta = Math.floor((Date.now() - unix * 1000) / 1000);
+  if (delta < 60) return rtf.format(-delta, 'second');
+  if (delta < 3600) return rtf.format(-Math.floor(delta / 60), 'minute');
+  if (delta < 86400) return rtf.format(-Math.floor(delta / 3600), 'hour');
+  if (delta < 2592000) return rtf.format(-Math.floor(delta / 86400), 'day');
+  if (delta < 31536000) return rtf.format(-Math.floor(delta / 2592000), 'month');
+  return rtf.format(-Math.floor(delta / 31536000), 'year');
+}
+
 commits.forEach(c => {
   const div = document.createElement('div');
   div.className = 'commit-entry';
   div.dataset.hash = c.hash;
-  div.innerHTML = '<div class="hash">' + c.hash + '</div><div class="msg">' + escape(c.message) + '</div>';
+  div.innerHTML = '<div class="hash">' + c.hash + ' <span class="time">' + relTime(c.timestamp) + '</span></div><div class="msg">' + escape(c.message) + '</div>';
   div.addEventListener('click', function (e) { selectCommit(c.hash); });
   list.appendChild(div);
 });

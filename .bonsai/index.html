@@ -26,10 +26,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 
   <a class="card" href="bonsai/">
     <h2>bonsai</h2>
-    <div class="msg">feat: sidebar with commits, click to show diff on right</div>
-    <div class="time">7 minutes ago</div>
+    <div class="msg">feat: main index with header, description, and 3-column repo card grid</div>
+    <div class="time" data-ts="1779810918"></div>
   </a>
 
 </div>
+<script>
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+function relTime(unix) {
+  if (!unix) return '';
+  const delta = Math.floor((Date.now() - unix * 1000) / 1000);
+  if (delta < 60) return rtf.format(-delta, 'second');
+  if (delta < 3600) return rtf.format(-Math.floor(delta / 60), 'minute');
+  if (delta < 86400) return rtf.format(-Math.floor(delta / 3600), 'hour');
+  if (delta < 2592000) return rtf.format(-Math.floor(delta / 86400), 'day');
+  if (delta < 31536000) return rtf.format(-Math.floor(delta / 2592000), 'month');
+  return rtf.format(-Math.floor(delta / 31536000), 'year');
+}
+document.querySelectorAll('[data-ts]').forEach(el => { el.textContent = relTime(el.dataset.ts); });
+</script>
 </body>
 </html>
