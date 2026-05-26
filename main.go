@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/himanshusardana/bonsai.git/cmd"
+	"github.com/himanshusardana/bonsai/cmd"
 )
 
 func main() {
