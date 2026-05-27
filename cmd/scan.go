@@ -43,7 +43,15 @@ func Scan(root string) {
 		os.Exit(1)
 	}
 
-	header, description, cloneBase := parseBonsaiConfig(root)
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting working directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	header, description, cloneBase := parseBonsaiConfig(cwd)
+
+	templateDir := findTemplateDir()
 
 	var repos []Repo
 
@@ -83,7 +91,6 @@ func Scan(root string) {
 	outDir := filepath.Join(absRoot, ".bonsai")
 	os.MkdirAll(outDir, 0755)
 
-	templateDir := filepath.Join(absRoot, "cmd", "templates")
 	detailTmpl := template.Must(template.New("detail.html").Funcs(funcMap).ParseFiles(filepath.Join(templateDir, "detail.html")))
 	mainTmpl := template.Must(template.New("main.html").Funcs(funcMap).ParseFiles(filepath.Join(templateDir, "main.html")))
 
@@ -116,6 +123,26 @@ func Scan(root string) {
 	} else {
 		fmt.Printf("Scanned %d repositories\n", len(repos))
 	}
+}
+
+func findTemplateDir() string {
+	exe, err := os.Executable()
+	if err == nil {
+		dir := filepath.Join(filepath.Dir(exe), "cmd", "templates")
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			return dir
+		}
+	}
+	cwd, err := os.Getwd()
+	if err == nil {
+		dir := filepath.Join(cwd, "cmd", "templates")
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			return dir
+		}
+	}
+	fmt.Fprintf(os.Stderr, "Error: cannot find cmd/templates/ directory\n")
+	os.Exit(1)
+	return ""
 }
 
 func parseBonsaiConfig(root string) (header, description, cloneBase string) {
